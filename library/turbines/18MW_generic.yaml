@@ -1,0 +1,21 @@
+blade:
+  deck_space: 581 # shields et al.     # m^2 (old length * root diam = 822) approx 822
+  length: 128.5          # m
+  type: Blade
+  mass: 91 # shields          # t (old power-fit 82.3)
+hub_height: 161       # m
+nacelle:
+  deck_space: 281 # shields      # m^2 old
+  type: Nacelle
+  mass: 1003 # shields         # t (old power-fit 1068)
+name: 18MW Generic Turbine
+rated_windspeed: 11   # m/s
+rotor_diameter: 263   # m
+tower:
+  deck_space: 78.5 # shields (10m diam)      # m^2 (old power-fit=10.2m diam)
+  sections: 2         # n old
+  type: Tower
+  length: 161          #
+  mass: 560 # shields         # t (old power-fit = 1292.0)
+turbine_rating: 18     # MW
+# old indicates copied from the 12 but not updated for 18 generic
