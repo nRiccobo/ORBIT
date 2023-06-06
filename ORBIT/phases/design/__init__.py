@@ -14,6 +14,6 @@ from .electrical_export import ElectricalDesign
 from .array_system_design import ArraySystemDesign, CustomArraySystemDesign
 from .export_system_design import ExportSystemDesign
 from .mooring_system_design import MooringSystemDesign
+from .semisub_pontoon_design import CustomSemiSubmersibleDesign
 from .scour_protection_design import ScourProtectionDesign
 from .semi_submersible_design import SemiSubmersibleDesign
-from .electrical_export import ElectricalDesign
