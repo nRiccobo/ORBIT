@@ -1,5 +1,12 @@
 """Provides the `SemiSubmersibleDesign` class.  Based on semisub design from 15 MW RWT
 
+[1]	C. Allen et al., “Definition of the UMaine VolturnUS-S Reference Platform Developed
+ for the IEA Wind 15-Megawatt Offshore Reference Wind Turbine,” NREL/TP--5000-76773, 
+ 1660012, MainId:9434, Jul. 2020. doi: 10.2172/1660012.
+[2]	K. L. Roach, M. A. Lackner, and J. F. Manwell, “A New Methodology for Upscaling 
+ Semi-submersible Platforms for Floating Offshore Wind Turbines,” Wind Energy Science 
+ Discussions, pp. 1–33, Feb. 2023, doi: 10.5194/wes-2023-18.
+
 """
 
 __author__ = "Matt Shields"
@@ -27,8 +34,9 @@ class CustomSemiSubmersibleDesign(DesignPhase):
             "pontoon_height": "m",
             "strut_diameter": "m",
             "steel_density": "kg/m^3 (optional, default: 8050)",
-            "ballast_mass": "tonnes (optional, default 2540)",
-            "steel_cost_rate": "$/tonne (optional, default: 3120)",
+            "ballast_mass": "tonnes (optional, default 0)",
+            "tower_interface_mass": "tonnes (optional, default 0)",
+            "steel_cost_rate": "$/tonne (optional, default: 4500)",
             "ballast_cost_rate": "$/tonne (optional, default: 150)",
         },
     }
@@ -54,38 +62,35 @@ class CustomSemiSubmersibleDesign(DesignPhase):
         self.config = self.validate_config(config)
         self._design = self.config.get("semisubmersible_design", {})
 
-        # Geometric scale formula from U-Mass paper: Insert Ref
+        # Upscaling Methodology from [2] using IEA-15MW reference platform [1]
         ref_turbine_radius = 120.0
         new_turbine_radius = np.float(config["turbine"]["rotor_diameter"] / 2)
 
-        alpha = 0.75  # 0.72-0.75 based on IEA-15MW turbine
+        # power-law parameter Lines 335-340 [2]
+        alpha = 0.72  
 
         self.geom_scale_factor = (
             new_turbine_radius / ref_turbine_radius
         ) ** alpha
-
-        self.mass_scale_factor = (
-            new_turbine_radius / ref_turbine_radius
-        ) ** 1.5
-
+        print("scale factor", self.geom_scale_factor)
         self._outputs = {}
 
     def run(self):
         """Main run function."""
 
         substructure = {
-            "mass": self.substructure_steel_mass,
+            "mass": self.substructure_mass,
             "unit_cost": self.substructure_unit_cost,
             "towing_speed": self._design.get("towing_speed", 6),
         }
-
+        print("Inside design: ", substructure)
         self._outputs["substructure"] = substructure
 
     @property
     def bouyant_column_volume(self):
         """
         Calculates the volume of a single (hollow) cylindrical buoyant column
-        Wall-thickness remains constant (U-Mass ref)
+        Wall-thickness remains constant [2]
         """
 
         d = (
@@ -98,7 +103,33 @@ class CustomSemiSubmersibleDesign(DesignPhase):
             * self.geom_scale_factor
         )
 
-        volume = (np.pi / 4) * (d**2 - (d - 2 * t) ** 2) * h
+        volume = (np.pi / 4) * ( 
+            h * d**2 - (h - 2 * t) * (d - 2 * t) ** 2
+        ) 
+
+        return volume
+    
+    @property
+    def center_column_volume(self):
+        """
+        Calculates the volume of a single (hollow) center column under the turbine
+        Wall-thickness remains constant [2]
+        """
+
+        d = 10.0 # fixed tower diameter 
+        t = self.config["semisubmersible_design"]["wall_thickness"]
+        h = (
+            self.config["semisubmersible_design"]["column_height"]
+            * self.geom_scale_factor
+        )
+        h2 = (
+            self.config["semisubmersible_design"]["pontoon_height"]
+            * self.geom_scale_factor
+        )
+
+        volume = (np.pi / 4) * ( 
+            (h - h2) * d**2 - (h - t - h2) * (d - 2 * t) ** 2
+        ) 
 
         return volume
 
@@ -107,8 +138,9 @@ class CustomSemiSubmersibleDesign(DesignPhase):
         """
         Calculates the volume of a single (hollow) pontoon that connects
         the central column to the outer columns.
-        Wall-thickness reamins constant (U-Mass ref)
+        Wall-thickness reamins constant [2]
         """
+        # TODO: Subtract semi-circular area from center column and fairlead column
 
         l = (
             self.config["semisubmersible_design"]["pontoon_length"]
@@ -125,8 +157,7 @@ class CustomSemiSubmersibleDesign(DesignPhase):
         t = self.config["semisubmersible_design"]["wall_thickness"]
 
         volume = (h * w - (h - 2 * t) * (w - 2 * t)) * l
-        # TODO: Subtract semi-circular area from center column and fairlead column
-
+        
         return volume
 
     @property
@@ -155,25 +186,54 @@ class CustomSemiSubmersibleDesign(DesignPhase):
         Calculates the total mass of structural steel in the substructure.
 
         """
-        # TODO: Add tower interface point mass (U-Mass ref)
+        # TODO: Separate out different steels for each component 
 
-        dens = self._design.get("steel_density", 8050)
+        dens = self._design.get("steel_density", 7980) # 8050)
 
         mass = (dens / 1000) * (
-            4 * self.bouyant_column_volume
+            3 * self.bouyant_column_volume
+            + self.center_column_volume
             + 3 * self.pontoon_volume
             + 3 * self.strut_volume
         )
+        print("Volumes: ", 3 * self.bouyant_column_volume,
+              self.center_column_volume,
+            3 * self.pontoon_volume,
+            3 * self.strut_volume)
 
         return mass
 
+    @property 
+    def ballast_mass(self):
+        """
+        Calculates the mass of fixed ballast. Default value from [1]
+
+        """
+        #TODO: Scale ballast mass with some factor? Fixed/Fluid needs to be addressed 
+
+        mass = self._design.get("ballast_mass", 2540) 
+        
+        return mass 
+    
+    @property 
+    def tower_interface_mass(self):
+        """
+        Calculates the mass of tower interface. Default value from [1]
+
+        """
+        #TODO: Find a model to estimate the mass for a tower interface
+
+        mass = self._design.get("tower_interface_mass", 100)
+
+        return mass 
     @property
     def substructure_steel_cost(self):
         """
-        Calculates the total cost of structural steel in the substructure in $USD
+        Calculates the total cost of structural steel in the substructure in $USD.
         """
+        # TODO: Apply different cost rates for different steels
 
-        steel_cr = self._design.get("steel_cost_rate", 3120)
+        steel_cr = self._design.get("steel_cost_rate", 4500)
 
         cost = steel_cr * self.substructure_steel_mass
 
@@ -184,10 +244,11 @@ class CustomSemiSubmersibleDesign(DesignPhase):
         """
         Calculates the total mass of structural steel and iron ore ballast in the substructure.
         """
+        tower_interface_mass = self.tower_interface_mass
+        ballast_mass = self.ballast_mass
+        print("inside substruct mass: ", tower_interface_mass, ballast_mass)
 
-        ballast_mass = self._design.get("ballast_mass", 2540)
-
-        mass = self.substructure_steel_mass + ballast_mass
+        mass = self.substructure_steel_mass + ballast_mass + tower_interface_mass
 
         return mass
 
@@ -197,8 +258,8 @@ class CustomSemiSubmersibleDesign(DesignPhase):
         Calculates the total material cost of a single substructure.
         Does not include final assembly or transportation costs.
         """
-
-        ballast_mass = self._design.get("ballast_mass", 2540)
+        
+        ballast_mass = self.ballast_mass
         ballast_cr = self._design.get("ballast_cost_rate", 150)
 
         cost = self.substructure_steel_cost + ballast_cr * ballast_mass

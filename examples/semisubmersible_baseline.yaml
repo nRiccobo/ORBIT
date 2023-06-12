@@ -5,8 +5,8 @@ site:
   distance_to_landfall: 52
 plant:
   layout: ring
-  #capacity: 600
-  num_turbines: 1
+  capacity: 600
+  #num_turbines: 1
   row_spacing: 7
   substation_distance: 1
   turbine_spacing: 7
@@ -42,7 +42,7 @@ substructure:
 design_phases:
 #- ArraySystemDesign
 #- ExportSystemDesign
-#- MooringSystemDesign
+- MooringSystemDesign
 #- OffshoreSubstationDesign
 - SemiSubmersibleDesign
 #- CustomSemiSubmersibleDesign
@@ -50,8 +50,8 @@ install_phases:
 #  ArrayCableInstallation: 0
 #  ExportCableInstallation: 0
   MooredSubInstallation: 0
-#  MooringSystemInstallation: 0
+  MooringSystemInstallation: 0
 #  OffshoreSubstationInstallation: 0
 #  TurbineInstallation: 0
 # Project Inputs
-turbine: 12MW_generic
+turbine: 15MW_generic
