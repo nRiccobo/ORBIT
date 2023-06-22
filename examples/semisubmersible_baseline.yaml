@@ -5,7 +5,7 @@ site:
   distance_to_landfall: 52
 plant:
   layout: ring
-  capacity: 600
+  capacity: 990
   #num_turbines: 1
   row_spacing: 7
   substation_distance: 1
@@ -55,3 +55,5 @@ install_phases:
 #  TurbineInstallation: 0
 # Project Inputs
 turbine: 15MW_generic
+semisubmersible_design:
+  stiffened_column_CR: 7000

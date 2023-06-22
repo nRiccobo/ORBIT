@@ -13,13 +13,13 @@ from ORBIT.phases.design import CustomSemiSubmersibleDesign
 debug = False
 saveCsv = True
 
-config_file = "semisubmersible_custom.yaml"
-output_filename = "orbit_semisub_cost_model_custom_IEA.csv"
-output_capex_filename = "orbit_semisub_capex_kW_custom_IEA.csv"
+config_file = "semisubmersible_baseline.yaml"
+output_filename = "orbit_semisub_cost_model_custom_baseline3.csv"
+output_capex_filename = "orbit_semisub_capex_kW_custom_baseline3.csv"
 
 # Define turbine types
 turbine_names = ["12MW", "15MW", "17MW", "18MW", "20MW"]
-#turbine_names = ["15MW"]
+# turbine_names = ["15MW"]
 
 turbine_files = [i + "_generic" for i in turbine_names]
 print(turbine_files)
@@ -57,7 +57,8 @@ for i, n in enumerate(turbine_names):
     project = ProjectManager(float_config)
     project.run(availability=0.8)
 
-    if debug: print("Design phases: ", project._design_phases)
+    if debug:
+        print("Design phases: ", project._design_phases)
 
     # dct = project.capex_breakdown
     dct = project.design_results["substructure"]
@@ -67,7 +68,7 @@ for i, n in enumerate(turbine_names):
 
     output = pd.concat([output, df], ignore_index=True)  # , axis=1)
     print("SubStructure: ($US) \n", df)
-    #print("detailed output \n", project.detailed_outputs)
+    # print("detailed output \n", project.detailed_outputs)
 
     dct2 = project.capex_breakdown_per_kw
     dct2 = {k: [np.round(v)] for k, v in dct2.items()}
