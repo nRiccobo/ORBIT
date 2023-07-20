@@ -6,11 +6,10 @@ __maintainer__ = "Jake Nunemaker"
 __email__ = "jake.nunemaker@nrel.gov"
 
 
-from marmot import Agent, process, le
-from marmot._exceptions import AgentNotRegistered
-
+from marmot import Agent, le, process
 from ORBIT.core import WetStorage
 from ORBIT.core.logic import position_onsite
+from marmot._exceptions import AgentNotRegistered
 from ORBIT.phases.install import InstallPhase
 from ORBIT.phases.install.mooring_install.mooring import (
     install_mooring_line,
@@ -25,7 +24,7 @@ class FloatingSubstationInstallation(InstallPhase):
     and tow-out processes.
     """
 
-    phase = "Offshore Substation Installation"
+    phase = "Offshore Floating Substation Installation"
     capex_category = "Offshore Substation"
 
     #:
@@ -41,8 +40,17 @@ class FloatingSubstationInstallation(InstallPhase):
             "type": "Floating",
             "takt_time": "int | float (optional, default: 0)",
             "unit_cost": "USD",
-            "mooring_cost": "USD",
+            # "mooring_cost": "USD",
             "towing_speed": "int | float (optional, default: 6 km/h)",
+        },
+        "mooring_system": {
+            # "system_cost": "USD", "}, # system cost is for all moorings in the whole farm, so you dont want this to be added to each substation
+            "num_lines",
+            "int",
+            "line_cost",
+            "USD",
+            "anchor_cost",
+            "USD",
         },
     }
 
@@ -89,11 +97,19 @@ class FloatingSubstationInstallation(InstallPhase):
         substructure = self.config["offshore_substation_substructure"][
             "unit_cost"
         ]
-        mooring = self.config["offshore_substation_substructure"][
-            "mooring_cost"
-        ]
-
-        return self.num_substations * (topside + substructure + mooring)
+        # mooring system
+        num_mooring_lines = self.config["mooring_system"]["num_lines"]
+        line_cost = self.config["mooring_system"]["line_cost"]
+        anchor_cost = self.config["mooring_system"]["anchor_cost"]
+        mooring_system_for_each_oss = num_mooring_lines * (
+            line_cost + anchor_cost
+        )
+        # print('topside: ' + str(topside))
+        # print('oss substructure' + str(substructure))
+        # print('mooring system' + str(mooring_system_for_each_oss))
+        return self.num_substations * (
+            topside + substructure + mooring_system_for_each_oss
+        )
 
     def initialize_substructure_production(self):
         """
@@ -144,7 +160,6 @@ class FloatingSubstationInstallation(InstallPhase):
 
     @property
     def detailed_output(self):
-
         return {}
 
 
@@ -175,13 +190,12 @@ def install_floating_substations(
     travel_time = distance / towing_speed
 
     for _ in range(number):
-
         start = vessel.env.now
         yield feed.get()
         delay = vessel.env.now - start
         if delay > 0:
             vessel.submit_action_log(
-                "Delay: Waiting on Completed Assembly", delay
+                "Delay: Waiting on Substation Assembly", delay
             )
 
         yield vessel.task(
@@ -196,7 +210,7 @@ def install_floating_substations(
             constraints={"windspeed": le(15), "waveheight": le(2.5)},
         )
 
-        for _ in range (3):
+        for _ in range(3):
             yield perform_mooring_site_survey(vessel)
             yield install_mooring_anchor(vessel, depth, "Suction Pile")
             yield install_mooring_line(vessel, depth)
@@ -214,6 +228,12 @@ def install_floating_substations(
             )
 
         yield vessel.transit(distance)
+
+    # TODO: Revise this to work with multiple substations
+    vessel.submit_debug_log(
+        message="Substation installation complete!",
+        progress="Offshore Substation",
+    )
 
 
 class SubstationAssemblyLine(Agent):
@@ -294,7 +314,9 @@ class SubstationAssemblyLine(Agent):
         delay = self.env.now - start
 
         if delay > 0:
-            self.submit_action_log("Delay: No Wet Storage Available", delay)
+            self.submit_action_log(
+                "Delay: No Substructure Storage Available", delay
+            )
 
     @process
     def start(self):
