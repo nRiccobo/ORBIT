@@ -13,11 +13,14 @@ from ORBIT.phases.design import CustomSemiSubmersibleDesign
 debug = False
 saveCsv = False
 
+tag = "custom" # Or baseline 
 config_file = "semisubmersible_baseline.yaml"
-output_filename = "orbit_semisub_cost_model_custom_baseline3.csv"
-output_capex_filename = "orbit_semisub_capex_kW_custom_baseline3.csv"
+#config_file = "semisubmersible_custom.yaml"
+output_filename = "orbit_semisub_cost_model_" + tag + ".csv"
+output_capex_filename = "orbit_semisub_capex_kW_" + tag + ".csv"
 
 # Define turbine types
+# Need to ensure that the turbine library contains all turbine files 
 #turbine_names = ["12MW", "15MW", "17MW", "18MW", "20MW"]
 turbine_names = ["18MW"]
 

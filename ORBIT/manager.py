@@ -846,6 +846,8 @@ class ProjectManager:
                 weather = weather.set_index("datetime")
                 if not isinstance(weather.index, pd.DatetimeIndex):
                     weather.index = pd.to_datetime(weather.index)
+                    #weather.head()
+                    #weather.index = pd.to_datetime(weather.index, format='mixed')
 
             except KeyError:
                 pass
